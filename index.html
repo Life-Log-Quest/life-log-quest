@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ライフログクエスト Ver.11.0</title>
+    <title>ライフログクエスト Ver.11.1</title>
     <style>
         :root {
             --bg-color: #121214;
@@ -255,35 +255,33 @@
     <details>
         <summary>詳細設定（属性耐性のカスタム）<span id="badge-area" class="custom-badge"></span></summary>
         <div class="resistance-grid">
-            <div class="resistance-grid">
-                <div class="resistance-group">
-                    <label>冷房耐性</label>
-                    <select id="res-cold" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
-                </div>
-                <div class="resistance-group">
-                    <label>低気圧耐性</label>
-                    <select id="res-pressure" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
-                </div>
-                <div class="resistance-group">
-                    <label>人混み耐性</label>
-                    <select id="res-crowd" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
-                </div>
-                <div class="resistance-group">
-                    <label>三半規管耐性</label>
-                    <select id="res-ears" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
-                </div>
-                <div class="resistance-group">
-                    <label>痛み耐性</label>
-                    <select id="res-pain" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
-                </div>
-                <div class="resistance-group">
-                    <label>対人耐性</label>
-                    <select id="res-social" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
-                </div>
-                <div class="resistance-group" style="grid-column: span 2;">
-                    <label>暑さ耐性</label>
-                    <select id="res-heat" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
-                </div>
+            <div class="resistance-group">
+                <label>冷房耐性</label>
+                <select id="res-cold" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
+            </div>
+            <div class="resistance-group">
+                <label>低気圧耐性</label>
+                <select id="res-pressure" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
+            </div>
+            <div class="resistance-group">
+                <label>人混み耐性</label>
+                <select id="res-crowd" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
+            </div>
+            <div class="resistance-group">
+                <label>三半規管耐性</label>
+                <select id="res-ears" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
+            </div>
+            <div class="resistance-group">
+                <label>痛み耐性</label>
+                <select id="res-pain" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
+            </div>
+            <div class="resistance-group">
+                <label>対人耐性</label>
+                <select id="res-social" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
+            </div>
+            <div class="resistance-group" style="grid-column: span 2;">
+                <label>暑さ耐性</label>
+                <select id="res-heat" class="res-select" onchange="updateResistanceBadge(); savePlayerData();"><option value="good">得意</option><option value="normal" selected>ふつう</option><option value="bad">苦手</option></select>
             </div>
         </div>
     </details>
@@ -462,7 +460,6 @@
         if (age === '40') { maxHp -= 1500; maxMp -= 1500; logs.push({text: "【経年デバフ】40代の洗礼：基礎HP/MP上限に低下補正が適用されているようです。", type: "debuff"}); }
         if (age === '50') { maxHp -= 2500; maxMp -= 2500; logs.push({text: "【経年デバフ】50代の洗礼：基礎HP/MP上限に強めの低下補正が適用されているようです。", type: "debuff"}); }
 
-        // 空欄時は160cm / 55kg として安全に計算
         const height = parseFloat(document.getElementById('height').value) || 160;
         const weight = parseFloat(document.getElementById('weight').value) || 55;
         const bmi = weight / ((height / 100) * (height / 100));
@@ -525,12 +522,17 @@
             logs.push({text: `【気圧異常デバフ】低気圧のフィールド効果（HP-${Math.round(pLossHp)}、MP-${Math.round(pLossMp)}）が直撃している模様。`, type: "debuff"});
         }
 
+        // クエストのカウント用変数
+        let activeQuestCount = 0;
+
         const rows = document.querySelectorAll('.event-row');
         rows.forEach(row => {
             const name = row.querySelector('.event-name').value.trim();
             const type = row.querySelector('.event-type').value;
 
             if (name === "") return;
+            
+            activeQuestCount++; // 有効なクエストが入力されていればカウント
 
             let textModifier = 1.0; let matchedRes = "";
             if (name.includes("人混み") || name.includes("電車") || name.includes("混雑")) {
@@ -568,6 +570,11 @@
                 logs.push({text: `【日常戦】「${name}」を淡々と消化。HPを${hpLoss}、MPを200消費した模様。`, type: "normal"});
             }
         });
+
+        // ★ 空欄（有効なクエストが0個）の時の特別処理
+        if (activeQuestCount === 0) {
+            logs.push({text: "【平穏日】今日は雑魚敵すら少なめです。この機会に回復を。", type: "buff"});
+        }
 
         if (currentHp < 0) currentHp = 0; if (currentMp < 0) currentMp = 0;
         const displayMaxHp = Math.max(maxHp, currentHp);
