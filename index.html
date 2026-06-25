@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ライフログクエスト Ver.11.1</title>
+    <title>ライフログクエスト Ver.12.0</title>
     <style>
         :root {
             --bg-color: #121214;
@@ -481,8 +481,12 @@
             logs.push({text: "【特性：標準体型】平均的な肉体バランスを維持しているようです。", type: "trait"});
         }
 
-        let currentHp = maxHp;
-        let currentMp = maxMp;
+        // デバフ・バフ処理後の「最終的な最大HP/MP」をここで確定させる
+        const finalMaxHp = maxHp;
+        const finalMaxMp = maxMp;
+
+        let currentHp = finalMaxHp;
+        let currentMp = finalMaxMp;
 
         const sleepStatus = document.getElementById('sleep-status').value;
         if (sleepStatus === 'good') {
@@ -522,7 +526,6 @@
             logs.push({text: `【気圧異常デバフ】低気圧のフィールド効果（HP-${Math.round(pLossHp)}、MP-${Math.round(pLossMp)}）が直撃している模様。`, type: "debuff"});
         }
 
-        // クエストのカウント用変数
         let activeQuestCount = 0;
 
         const rows = document.querySelectorAll('.event-row');
@@ -531,8 +534,7 @@
             const type = row.querySelector('.event-type').value;
 
             if (name === "") return;
-            
-            activeQuestCount++; // 有効なクエストが入力されていればカウント
+            activeQuestCount++; 
 
             let textModifier = 1.0; let matchedRes = "";
             if (name.includes("人混み") || name.includes("電車") || name.includes("混雑")) {
@@ -564,34 +566,63 @@
             } else if (type === 'super-hate') {
                 let hpDam = Math.round(3000 * finalDef); let mpDam = Math.round(4500 * finalDef);
                 currentHp -= hpDam; currentMp -= mpDam; let resLog = matchedRes ? `（${matchedRes}連動）` : "";
-                logs.push({text: `【大ボス戦】「${name}」との決戦${resLog}！HPに${hpDam}、MPに${mpDam}の致命的な大ダメージを被った模様。`, type: "damage"});
+                logs.push({text: `【大ボス戦】「${name}」との決戦${resLog}！HPに${hpDam}、MPに${hpDam}の致命的な大ダメージを被った模様。`, type: "damage"});
             } else {
                 let hpLoss = Math.round(500 * finalDef); currentHp -= hpLoss; currentMp -= 200;
                 logs.push({text: `【日常戦】「${name}」を淡々と消化。HPを${hpLoss}、MPを200消費した模様。`, type: "normal"});
             }
         });
 
-        // ★ 空欄（有効なクエストが0個）の時の特別処理
         if (activeQuestCount === 0) {
             logs.push({text: "【平穏日】今日は雑魚敵すら少なめです。この機会に回復を。", type: "buff"});
         }
 
-        if (currentHp < 0) currentHp = 0; if (currentMp < 0) currentMp = 0;
-        const displayMaxHp = Math.max(maxHp, currentHp);
-        const displayMaxMp = Math.max(maxMp, currentMp);
+        // 上限・下限の丸め処理（最終的な最大値をベースに固定）
+        if (currentHp < 0) currentHp = 0; if (currentHp > finalMaxHp) currentHp = finalMaxHp;
+        if (currentMp < 0) currentMp = 0; if (currentMp > finalMaxMp) currentMp = finalMaxMp;
 
+        // --- 📊 ここからお前のオーダーした新しい条件分岐 ---
+        // 最終的な最大値に対する現在値の割合（％）を正しく計算
+        const hpPercent = (currentHp / finalMaxHp) * 100;
+        const mpPercent = (currentMp / finalMaxMp) * 100;
+        
+        // 総合コンディションを測るために、低い方の割合をベースにする（一方が死にかけてたら危険なため）
+        const lowestPercent = Math.min(hpPercent, mpPercent);
+
+        let evalText = "";
+
+        if (currentHp === 0 && currentMp === 0) {
+            evalText = "☠️ 完全に戦闘不能（全滅）の予測です。宿屋（布団）へ直行し、コマンド入力を停止してください。";
+        } else if (lowestPercent >= 90) {
+            evalText = "✨ 絶好調です。今日はバフがよく乗っています。普段後回しにしがちなクエストを進めるのも良いでしょう。";
+        } else if (lowestPercent >= 70) {
+            evalText = "⚔️ 現在のところ、戦況は安定している模様です。多少の損耗は見られますが、十分行動可能です。ご自身のペースを保ちつつ進みましょう。";
+        } else {
+            // 40%〜69% (消耗)、20%〜39% (危険)、0%〜19% (瀕死) の基本ベースを決定
+            if (lowestPercent >= 40) {
+                evalText = "⚠️ じわじわ削られています。雑魚敵でも油断すると地味に痛い日です。省エネ運用を推奨します。";
+            } else if (lowestPercent >= 20) {
+                evalText = "🚨 危険域です。すでに複数のデバフを受けている可能性があります。深追いは非推奨です。";
+            } else {
+                evalText = "☠️ 瀕死状態です。宿屋や教会ではなく、現実の休息や医療機関が必要な可能性があります。";
+            }
+
+            // さらに「消耗」以下の時に、HPとMPの偏りによる詳細な特殊分岐を上書き追加
+            // 割合の差が15%以上ある場合に、偏りデバフの警告を追記する
+            if (mpPercent - hpPercent >= 15) {
+                evalText += "<br><span style='color:#ff5722; font-size:0.85rem;'>【状況警告】身体の損耗が目立ちます。肉体労働系クエスト注意。</span>";
+            } else if (hpPercent - mpPercent >= 15) {
+                evalText += "<br><span style='color:#ff5722; font-size:0.85rem;'>【状況警告】気力が削られています。対人クエスト注意。</span>";
+            }
+        }
+
+        // 画面描画
         document.getElementById('status-screen').style.display = 'block';
-        document.getElementById('hp-text').innerText = `${Math.round(currentHp)} / ${displayMaxHp}`;
-        document.getElementById('mp-text').innerText = `${Math.round(currentMp)} / ${displayMaxMp}`;
-        document.getElementById('hp-bar').style.width = `${(currentHp / displayMaxHp) * 100}%`;
-        document.getElementById('mp-bar').style.width = `${(currentMp / displayMaxMp) * 100}%`;
-
-        let evalText = ""; const hpPercent = (currentHp / displayMaxHp) * 100;
-        if (currentHp === 0 && currentMp === 0) { evalText = "☠️ 全滅状態（戦闘不能）の予測です。すべてのクエストを破棄し、最優先で宿屋（布団）へ逃げ込むべきかもしれません。"; } 
-        else if (currentMp === 0) { evalText = "🧠 MPが完全に枯渇している模様。身体のスタミナはあっても、精神の限界（ガス欠）を迎えている可能性があります。"; } 
-        else if (hpPercent < 30) { evalText = "⚠️ HPが残り3割未満の危険水域です。これ以上の無理な進軍は大きなデバフに繋がる可能性があります。"; } 
-        else { evalText = "⚔️ 多少の損耗は見られますが、戦況は維持できている模様です。マイペースに今日を乗り切りましょう。"; }
-        document.getElementById('eval-text').innerText = evalText;
+        document.getElementById('hp-text').innerText = `${Math.round(currentHp)} / ${finalMaxHp}`;
+        document.getElementById('mp-text').innerText = `${Math.round(currentMp)} / ${finalMaxMp}`;
+        document.getElementById('hp-bar').style.width = `${(currentHp / finalMaxHp) * 100}%`;
+        document.getElementById('mp-bar').style.width = `${(currentMp / finalMaxMp) * 100}%`;
+        document.getElementById('eval-text').innerHTML = evalText; // HTMLタグ（改行）を通すためにinnerHTMLに変更
 
         const logListDiv = document.getElementById('log-list'); logListDiv.innerHTML = "";
         logs.forEach(log => {
