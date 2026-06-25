@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ライフログクエスト Ver.12.0</title>
+    <title>ライフログクエスト Ver.13.0</title>
     <style>
         :root {
             --bg-color: #121214;
@@ -212,7 +212,14 @@
         医療診断や治療の代替ではありません。体調不良時は医療機関を受診してください。
     </div>
 
+    <!-- 1. キャラクター特性 -->
     <div class="section-title">CHARACTER MAKING</div>
+    <div class="form-row">
+        <div class="form-group">
+            <label>ニックネーム</label>
+            <input type="text" id="player-name" placeholder="無名の旅人" oninput="savePlayerData()">
+        </div>
+    </div>
     <div class="form-row">
         <div class="form-group">
             <label>性別</label>
@@ -252,6 +259,7 @@
         </div>
     </div>
 
+    <!-- アコーディオン属性耐性 -->
     <details>
         <summary>詳細設定（属性耐性のカスタム）<span id="badge-area" class="custom-badge"></span></summary>
         <div class="resistance-grid">
@@ -286,6 +294,7 @@
         </div>
     </details>
 
+    <!-- 2. 環境・コンディション -->
     <div class="section-title">ENVIRONMENT & BUFF</div>
     <div class="form-row">
         <div class="form-group">
@@ -317,6 +326,7 @@
         </div>
     </div>
 
+    <!-- 3. イベント -->
     <div class="section-title">DAILY QUESTS</div>
     <div id="event-list">
         <div class="event-row">
@@ -333,9 +343,10 @@
 
     <button class="calc-btn" onclick="calculateStatus()">クエスト開始（ステータス算出）</button>
 
+    <!-- 4. 結果表示 -->
     <div id="status-screen">
         <h2>PARTY STATUS (予測値)</h2>
-        <div style="font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid #fff; padding-bottom: 5px;">あやの</div>
+        <div id="display-name-area" style="font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid #fff; padding-bottom: 5px;"></div>
         
         <div class="status-row">
             <div>
@@ -379,6 +390,7 @@
 
     function savePlayerData() {
         const playerData = {
+            playerName: document.getElementById('player-name').value,
             gender: document.getElementById('gender').value,
             age: document.getElementById('age').value,
             height: document.getElementById('height').value,
@@ -399,6 +411,7 @@
         const savedData = localStorage.getItem('lifeLogQuestData');
         if (savedData) {
             const data = JSON.parse(savedData);
+            if(data.playerName) document.getElementById('player-name').value = data.playerName;
             if(data.gender) document.getElementById('gender').value = data.gender;
             if(data.age) document.getElementById('age').value = data.age;
             if(data.height) document.getElementById('height').value = data.height;
@@ -447,6 +460,9 @@
 
         let baseDefense = 1.0; 
 
+        const nameInput = document.getElementById('player-name').value.trim();
+        const finalPlayerName = nameInput === "" ? "無名の旅人" : nameInput;
+
         const resCold = document.getElementById('res-cold').value;
         const resPressure = document.getElementById('res-pressure').value;
         const resCrowd = document.getElementById('res-crowd').value;
@@ -481,7 +497,6 @@
             logs.push({text: "【特性：標準体型】平均的な肉体バランスを維持しているようです。", type: "trait"});
         }
 
-        // デバフ・バフ処理後の「最終的な最大HP/MP」をここで確定させる
         const finalMaxHp = maxHp;
         const finalMaxMp = maxMp;
 
@@ -494,7 +509,7 @@
             logs.push({text: "【完全休息バフ】7時間以上の睡眠。心身の修復が万全な傾向にあります（HP+500, MP+1500）。", type: "buff"});
         } else if (sleepStatus === 'bad') {
             currentHp -= 1000; currentMp -= 1500;
-            logs.push({text: "【睡眠不足デバフ】6時間未満の睡眠。精神的余裕が削られている可能性があります（HP-1000, MP-1500）。", type: "debuff"});
+            logs.push({text: "【睡眠不足デバフ】6時間未満の睡眠。精神前余力が削られている可能性があります（HP-1000, MP-1500）。", type: "debuff"});
         } else if (sleepStatus === 'very-bad') {
             currentHp -= 2000; currentMp -= 3000;
             logs.push({text: "【深刻な不眠デバフ】3時間以下の睡眠。深刻なスタミナ低下と、強い精神ペナルティの兆候があります（HP-2000, MP-3000）。", type: "debuff"});
@@ -566,7 +581,7 @@
             } else if (type === 'super-hate') {
                 let hpDam = Math.round(3000 * finalDef); let mpDam = Math.round(4500 * finalDef);
                 currentHp -= hpDam; currentMp -= mpDam; let resLog = matchedRes ? `（${matchedRes}連動）` : "";
-                logs.push({text: `【大ボス戦】「${name}」との決戦${resLog}！HPに${hpDam}、MPに${hpDam}の致命的な大ダメージを被った模様。`, type: "damage"});
+                logs.push({text: `【大ボス戦】「${name}」との決戦${resLog}！HPに${hpDam}、MPに${mpDam}の致命的な大ダメージを被った模様。`, type: "damage"});
             } else {
                 let hpLoss = Math.round(500 * finalDef); currentHp -= hpLoss; currentMp -= 200;
                 logs.push({text: `【日常戦】「${name}」を淡々と消化。HPを${hpLoss}、MPを200消費した模様。`, type: "normal"});
@@ -577,16 +592,11 @@
             logs.push({text: "【平穏日】今日は雑魚敵すら少なめです。この機会に回復を。", type: "buff"});
         }
 
-        // 上限・下限の丸め処理（最終的な最大値をベースに固定）
         if (currentHp < 0) currentHp = 0; if (currentHp > finalMaxHp) currentHp = finalMaxHp;
         if (currentMp < 0) currentMp = 0; if (currentMp > finalMaxMp) currentMp = finalMaxMp;
 
-        // --- 📊 ここからお前のオーダーした新しい条件分岐 ---
-        // 最終的な最大値に対する現在値の割合（％）を正しく計算
         const hpPercent = (currentHp / finalMaxHp) * 100;
         const mpPercent = (currentMp / finalMaxMp) * 100;
-        
-        // 総合コンディションを測るために、低い方の割合をベースにする（一方が死にかけてたら危険なため）
         const lowestPercent = Math.min(hpPercent, mpPercent);
 
         let evalText = "";
@@ -598,7 +608,6 @@
         } else if (lowestPercent >= 70) {
             evalText = "⚔️ 現在のところ、戦況は安定している模様です。多少の損耗は見られますが、十分行動可能です。ご自身のペースを保ちつつ進みましょう。";
         } else {
-            // 40%〜69% (消耗)、20%〜39% (危険)、0%〜19% (瀕死) の基本ベースを決定
             if (lowestPercent >= 40) {
                 evalText = "⚠️ じわじわ削られています。雑魚敵でも油断すると地味に痛い日です。省エネ運用を推奨します。";
             } else if (lowestPercent >= 20) {
@@ -607,8 +616,6 @@
                 evalText = "☠️ 瀕死状態です。宿屋や教会ではなく、現実の休息や医療機関が必要な可能性があります。";
             }
 
-            // さらに「消耗」以下の時に、HPとMPの偏りによる詳細な特殊分岐を上書き追加
-            // 割合の差が15%以上ある場合に、偏りデバフの警告を追記する
             if (mpPercent - hpPercent >= 15) {
                 evalText += "<br><span style='color:#ff5722; font-size:0.85rem;'>【状況警告】身体の損耗が目立ちます。肉体労働系クエスト注意。</span>";
             } else if (hpPercent - mpPercent >= 15) {
@@ -616,13 +623,13 @@
             }
         }
 
-        // 画面描画
         document.getElementById('status-screen').style.display = 'block';
+        document.getElementById('display-name-area').innerText = finalPlayerName; // 動的な名前に差し替え
         document.getElementById('hp-text').innerText = `${Math.round(currentHp)} / ${finalMaxHp}`;
         document.getElementById('mp-text').innerText = `${Math.round(currentMp)} / ${finalMaxMp}`;
         document.getElementById('hp-bar').style.width = `${(currentHp / finalMaxHp) * 100}%`;
         document.getElementById('mp-bar').style.width = `${(currentMp / finalMaxMp) * 100}%`;
-        document.getElementById('eval-text').innerHTML = evalText; // HTMLタグ（改行）を通すためにinnerHTMLに変更
+        document.getElementById('eval-text').innerHTML = evalText;
 
         const logListDiv = document.getElementById('log-list'); logListDiv.innerHTML = "";
         logs.forEach(log => {
